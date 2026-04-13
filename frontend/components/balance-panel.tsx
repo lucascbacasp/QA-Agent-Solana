@@ -3,7 +3,7 @@ import { useBalances } from "@/hooks/use-balances";
 import { TOKENS } from "@/lib/constants";
 
 export function BalancePanel() {
-  const { balances, loading } = useBalances();
+  const { balances, loading, error } = useBalances();
   const balanceMap: Record<string, number | null> = {
     SOL: balances.SOL,
     jitoSOL: balances.jitoSOL,
@@ -13,6 +13,9 @@ export function BalancePanel() {
   return (
     <div className="space-y-2">
       <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Wallet Balances</h2>
+      {error && (
+        <p className="text-xs text-red-400 bg-red-500/10 rounded px-2 py-1">{error}</p>
+      )}
       <div className="grid grid-cols-3 gap-3">
         {TOKENS.map((token) => {
           const bal = balanceMap[token.symbol];
