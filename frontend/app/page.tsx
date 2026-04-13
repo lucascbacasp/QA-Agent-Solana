@@ -4,6 +4,7 @@ import { BalancePanel } from "@/components/balance-panel";
 import { UrlTestForm } from "@/components/url-test-form";
 import { TestStepper } from "@/components/test-stepper";
 import { ReportHistory } from "@/components/report-history";
+import { AboutPanel } from "@/components/about-panel";
 import { useTestRunner } from "@/hooks/use-test-runner";
 
 export default function Home() {
@@ -23,6 +24,7 @@ export default function Home() {
 
           {/* Right column */}
           <div className="space-y-4">
+            <AboutPanel />
             <UrlTestForm
               onStart={runner.start}
               onReset={runner.reset}
