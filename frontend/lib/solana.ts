@@ -1,43 +1,36 @@
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { HELIUS_RPC_URL } from "./constants";
 
-let connection: Connection | null = null;
+/**
+ * Direct RPC calls without @solana/web3.js to avoid bundling issues.
+ * Uses raw JSON-RPC fetch for browser compatibility.
+ */
 
-export function getConnection(): Connection {
-  if (!connection) {
-    connection = new Connection(HELIUS_RPC_URL, "confirmed");
-  }
-  return connection;
+async function rpcCall(method: string, params: unknown[]): Promise<unknown> {
+  const res = await fetch(HELIUS_RPC_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message);
+  return json.result;
 }
 
 export async function fetchSOLBalance(walletAddress: string): Promise<number> {
-  const conn = getConnection();
-  const pubkey = new PublicKey(walletAddress);
-  const balance = await conn.getBalance(pubkey);
-  return balance / LAMPORTS_PER_SOL;
+  const result = (await rpcCall("getBalance", [walletAddress])) as { value: number };
+  return result.value / 1e9;
 }
 
 export async function fetchTokenBalance(
   walletAddress: string,
   mintAddress: string,
 ): Promise<number> {
-  const conn = getConnection();
-  const wallet = new PublicKey(walletAddress);
-  const mint = new PublicKey(mintAddress);
+  const result = (await rpcCall("getTokenAccountsByOwner", [
+    walletAddress,
+    { mint: mintAddress },
+    { encoding: "jsonParsed" },
+  ])) as { value: Array<{ account: { data: { parsed: { info: { tokenAmount: { uiAmount: number } } } } } }> };
 
-  // Derive ATA
-  const [ata] = PublicKey.findProgramAddressSync(
-    [wallet.toBuffer(), new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA").toBuffer(), mint.toBuffer()],
-    new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
-  );
-
-  try {
-    const info = await conn.getParsedAccountInfo(ata);
-    if (info.value?.data && "parsed" in info.value.data) {
-      return parseFloat(info.value.data.parsed.info.tokenAmount.uiAmountString);
-    }
-  } catch {
-    // ATA doesn't exist
-  }
-  return 0;
+  if (result.value.length === 0) return 0;
+  return result.value[0].account.data.parsed.info.tokenAmount.uiAmount;
 }
