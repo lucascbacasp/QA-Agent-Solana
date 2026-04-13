@@ -1,10 +1,5 @@
 import { HELIUS_RPC_URL } from "./constants";
 
-/**
- * Direct RPC calls without @solana/web3.js to avoid bundling issues.
- * Uses raw JSON-RPC fetch for browser compatibility.
- */
-
 async function rpcCall(method: string, params: unknown[]): Promise<unknown> {
   const res = await fetch(HELIUS_RPC_URL, {
     method: "POST",
@@ -17,7 +12,10 @@ async function rpcCall(method: string, params: unknown[]): Promise<unknown> {
 }
 
 export async function fetchSOLBalance(walletAddress: string): Promise<number> {
-  const result = (await rpcCall("getBalance", [walletAddress])) as { value: number };
+  const result = (await rpcCall("getBalance", [
+    walletAddress,
+    { commitment: "confirmed" },
+  ])) as { value: number };
   return result.value / 1e9;
 }
 
@@ -25,12 +23,23 @@ export async function fetchTokenBalance(
   walletAddress: string,
   mintAddress: string,
 ): Promise<number> {
+  // Use getTokenAccountsByOwner with proper Helius-compatible params
   const result = (await rpcCall("getTokenAccountsByOwner", [
     walletAddress,
     { mint: mintAddress },
-    { encoding: "jsonParsed" },
-  ])) as { value: Array<{ account: { data: { parsed: { info: { tokenAmount: { uiAmount: number } } } } } }> };
+    { encoding: "jsonParsed", commitment: "confirmed" },
+  ])) as {
+    value: Array<{
+      account: {
+        data: {
+          parsed: {
+            info: { tokenAmount: { uiAmount: number } };
+          };
+        };
+      };
+    }>;
+  };
 
-  if (result.value.length === 0) return 0;
+  if (!result.value || result.value.length === 0) return 0;
   return result.value[0].account.data.parsed.info.tokenAmount.uiAmount;
 }
