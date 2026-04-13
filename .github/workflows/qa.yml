@@ -1,0 +1,45 @@
+name: Meta Pool QA
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # cada 6 horas
+  workflow_dispatch:         # trigger manual
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download IDL
+        run: |
+          mkdir -p idl
+          curl -sL "https://raw.githubusercontent.com/Meta-Pool/solana-restaking-aggregator/main/res/mp_sol_restaking.json" -o idl/mpsol.json
+
+      - name: Run QA tests
+        run: npx tsx src/index.ts
+        env:
+          QA_WALLET_PRIVATE_KEY: ${{ secrets.QA_WALLET_PRIVATE_KEY }}
+          HELIUS_RPC_URL: ${{ secrets.HELIUS_RPC_URL }}
+          MAX_SPEND_PER_SESSION: '0.05'
+          MAX_SPEND_PER_TEST: '0.015'
+          DRY_RUN: 'false'
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report-${{ github.run_number }}
+          path: reports/
+          retention-days: 30

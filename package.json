@@ -1,0 +1,26 @@
+{
+  "name": "qa-agent-mpsol",
+  "version": "1.0.0",
+  "description": "QA Agent for Meta Pool mpSOL on Solana mainnet",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "fetch-idl": "tsx src/scripts/fetch-idl.ts",
+    "check-state": "tsx src/scripts/check-state.ts",
+    "swap": "tsx src/scripts/swap-sol-to-lst.ts",
+    "ui-test": "tsx src/scripts/ui-test.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.30.1",
+    "@solana/spl-token": "^0.4.9",
+    "@solana/web3.js": "^1.98.0",
+    "bs58": "^6.0.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.local
+qa-wallet.json
+idl/
+.next/
+.claude/
