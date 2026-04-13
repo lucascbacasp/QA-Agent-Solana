@@ -1,9 +1,15 @@
 "use client";
 import { useBalances } from "@/hooks/use-balances";
 import { TOKENS } from "@/lib/constants";
+import type { WalletMode } from "@/hooks/use-active-wallet";
 
-export function BalancePanel() {
-  const { balances, loading, error } = useBalances();
+interface Props {
+  walletAddress: string;
+  mode: WalletMode;
+}
+
+export function BalancePanel({ walletAddress, mode }: Props) {
+  const { balances, loading, error } = useBalances(walletAddress);
   const balanceMap: Record<string, number | null> = {
     SOL: balances.SOL,
     jitoSOL: balances.jitoSOL,
@@ -12,7 +18,12 @@ export function BalancePanel() {
 
   return (
     <div className="space-y-2">
-      <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Wallet Balances</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Wallet Balances</h2>
+        <span className={`text-xs px-2 py-0.5 rounded-full ${mode === "qa" ? "bg-teal-500/10 text-teal-400" : "bg-purple-500/10 text-purple-400"}`}>
+          {mode === "qa" ? "QA Wallet" : "Your Wallet"}
+        </span>
+      </div>
       {error && (
         <p className="text-xs text-red-400 bg-red-500/10 rounded px-2 py-1">{error}</p>
       )}

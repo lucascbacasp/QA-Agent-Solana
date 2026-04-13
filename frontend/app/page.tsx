@@ -6,19 +6,29 @@ import { TestStepper } from "@/components/test-stepper";
 import { ReportHistory } from "@/components/report-history";
 import { AboutPanel } from "@/components/about-panel";
 import { useTestRunner } from "@/hooks/use-test-runner";
+import { useActiveWallet } from "@/hooks/use-active-wallet";
 
 export default function Home() {
   const runner = useTestRunner();
+  const wallet = useActiveWallet();
 
   return (
     <div className="min-h-screen flex flex-col">
-      <WalletHeader />
+      <WalletHeader
+        mode={wallet.mode}
+        activeAddress={wallet.activeAddress}
+        walletName={wallet.walletName}
+        connected={wallet.connected}
+        onSwitchToQA={wallet.switchToQA}
+        onSwitchToConnected={wallet.switchToConnected}
+        onDisconnect={wallet.disconnectWallet}
+      />
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left column */}
           <div className="space-y-6">
-            <BalancePanel />
+            <BalancePanel walletAddress={wallet.activeAddress} mode={wallet.mode} />
             <ReportHistory newReport={runner.report} />
           </div>
 
