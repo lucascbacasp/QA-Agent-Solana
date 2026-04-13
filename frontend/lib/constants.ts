@@ -1,5 +1,5 @@
 // Protocol addresses (ported from src/core/config.ts + known-lsts.ts)
-export const QA_WALLET = process.env.NEXT_PUBLIC_QA_WALLET || "GxQYMQTMKYFWHUbgWhaBjsBxtZCiLA8t3JLQaceab6b5";
+export const QA_WALLET = (process.env.NEXT_PUBLIC_QA_WALLET || "GxQYMQTMKYFWHUbgWhaBjsBxtZCiLA8t3JLQaceab6b5").trim();
 
 // Helius free tier RPC — fallback hardcoded for static builds
 const DEFAULT_RPC = "https://mainnet.helius-rpc.com/?api-key=d65fcbc3-d4a4-4739-8101-facb5086cedc";
