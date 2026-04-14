@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fetchSOLBalance, fetchTokenBalance } from "@/lib/solana";
 import { TOKENS } from "@/lib/constants";
 
@@ -9,24 +9,25 @@ interface Balances {
   mpSOL: number | null;
 }
 
+const EMPTY: Balances = { SOL: null, jitoSOL: null, mpSOL: null };
+
 export function useBalances(
   walletAddress: string,
   refreshTrigger = 0,
   pollIntervalMs = 30000,
 ) {
-  const [balances, setBalances] = useState<Balances>({ SOL: null, jitoSOL: null, mpSOL: null });
+  const [balances, setBalances] = useState<Balances>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const prevAddress = useRef(walletAddress);
 
-  const refetch = useCallback(async () => {
-    if (!walletAddress) return;
+  const doFetch = useCallback(async (addr: string) => {
+    if (!addr) return;
     try {
       setError(null);
       const [sol, jito, mpsol] = await Promise.all([
-        fetchSOLBalance(walletAddress),
-        fetchTokenBalance(walletAddress, TOKENS[1].mint!),
-        fetchTokenBalance(walletAddress, TOKENS[2].mint!),
+        fetchSOLBalance(addr),
+        fetchTokenBalance(addr, TOKENS[1].mint!),
+        fetchTokenBalance(addr, TOKENS[2].mint!),
       ]);
       setBalances({ SOL: sol, jitoSOL: jito, mpSOL: mpsol });
     } catch (err: unknown) {
@@ -34,26 +35,26 @@ export function useBalances(
     } finally {
       setLoading(false);
     }
-  }, [walletAddress]);
+  }, []);
 
-  // Reset and refetch when wallet address changes
+  // Reset + fetch when wallet address changes
   useEffect(() => {
-    if (walletAddress !== prevAddress.current) {
-      prevAddress.current = walletAddress;
-      setLoading(true);
-      setBalances({ SOL: null, jitoSOL: null, mpSOL: null });
-    }
-    refetch();
-    const interval = setInterval(refetch, pollIntervalMs);
+    setLoading(true);
+    setBalances(EMPTY);
+    setError(null);
+    doFetch(walletAddress);
+    const interval = setInterval(() => doFetch(walletAddress), pollIntervalMs);
     return () => clearInterval(interval);
-  }, [refetch, pollIntervalMs, walletAddress]);
+  }, [walletAddress, doFetch, pollIntervalMs]);
 
-  // Refetch when external trigger changes (e.g., test runner completes)
+  // Refetch on external trigger (test complete, manual refresh)
   useEffect(() => {
     if (refreshTrigger > 0) {
-      refetch();
+      doFetch(walletAddress);
     }
-  }, [refreshTrigger, refetch]);
+  }, [refreshTrigger, walletAddress, doFetch]);
+
+  const refetch = useCallback(() => doFetch(walletAddress), [doFetch, walletAddress]);
 
   return { balances, loading, error, refetch };
 }

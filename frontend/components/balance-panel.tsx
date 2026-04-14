@@ -30,7 +30,7 @@ export function BalancePanel({ walletAddress, mode, refreshTrigger = 0 }: Props)
             Refresh
           </button>
           <span className={`text-xs px-2 py-0.5 rounded-full ${mode === "qa" ? "bg-teal-500/10 text-teal-400" : "bg-purple-500/10 text-purple-400"}`}>
-            {mode === "qa" ? "QA Wallet" : "Your Wallet"}
+            {mode === "qa" ? "QA Wallet" : "Your Wallet"} &middot; {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
           </span>
         </div>
       </div>
