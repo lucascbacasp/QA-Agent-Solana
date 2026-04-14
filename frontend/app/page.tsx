@@ -21,6 +21,10 @@ export default function Home() {
     }
   }, [runner.status]);
 
+  const handleStart = (url: string) => {
+    runner.start(url, wallet.activeAddress);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <WalletHeader
@@ -49,7 +53,7 @@ export default function Home() {
           <div className="space-y-4">
             <AboutPanel />
             <UrlTestForm
-              onStart={runner.start}
+              onStart={handleStart}
               onReset={runner.reset}
               isRunning={runner.status === "running"}
               isDone={runner.status === "done" || runner.status === "failed"}
