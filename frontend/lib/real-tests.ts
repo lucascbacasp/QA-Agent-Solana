@@ -339,6 +339,39 @@ export async function urlAccessCheck(url: string): Promise<TestResult> {
 }
 
 // ─────────────────────────────────────────────
+// Transaction tests (run server-side via API)
+// ─────────────────────────────────────────────
+async function runTxTest(testName: string): Promise<TestResult> {
+  const start = Date.now();
+  try {
+    const res = await fetch("/api/run-tx-tests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tests: [testName] }),
+    });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    if (json.results && json.results.length > 0) return json.results[0];
+    throw new Error("No result returned");
+  } catch (err: unknown) {
+    return {
+      name: testName,
+      status: "ERROR",
+      durationMs: Date.now() - start,
+      error: err instanceof Error ? err.message : "API call failed",
+    };
+  }
+}
+
+export async function stakeTest(): Promise<TestResult> {
+  return runTxTest("stake_jitosol");
+}
+
+export async function unstakeTest(): Promise<TestResult> {
+  return runTxTest("unstake_mpsol");
+}
+
+// ─────────────────────────────────────────────
 // Run all tests
 // ─────────────────────────────────────────────
 export interface RealTestCallbacks {
@@ -349,17 +382,25 @@ export interface RealTestCallbacks {
 export async function runAllTests(
   url: string,
   walletAddress: string,
+  includeTxTests: boolean,
   callbacks: RealTestCallbacks,
 ): Promise<TestResult[]> {
   const results: TestResult[] = [];
 
-  const tests = [
+  const tests: { name: string; fn: () => Promise<TestResult> }[] = [
     { name: "url_access_check", fn: () => urlAccessCheck(url) },
     { name: "wallet_balance_check", fn: () => walletBalanceCheck(walletAddress) },
     { name: "pool_state_check", fn: () => poolStateCheck() },
     { name: "price_peg_check", fn: () => pricePegCheck() },
     { name: "vault_status_check", fn: () => vaultStatusCheck() },
   ];
+
+  if (includeTxTests) {
+    tests.push(
+      { name: "stake_jitosol", fn: () => stakeTest() },
+      { name: "unstake_mpsol", fn: () => unstakeTest() },
+    );
+  }
 
   for (const test of tests) {
     callbacks.onStepStart(test.name);

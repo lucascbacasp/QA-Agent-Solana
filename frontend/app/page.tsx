@@ -21,8 +21,8 @@ export default function Home() {
     }
   }, [runner.status]);
 
-  const handleStart = (url: string) => {
-    runner.start(url, wallet.activeAddress);
+  const handleStart = (url: string, includeTxTests: boolean) => {
+    runner.start(url, wallet.activeAddress, includeTxTests);
   };
 
   return (

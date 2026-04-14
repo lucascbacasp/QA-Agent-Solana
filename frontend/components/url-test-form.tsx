@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 interface Props {
-  onStart: (url: string) => void;
+  onStart: (url: string, includeTxTests: boolean) => void;
   onReset: () => void;
   isRunning: boolean;
   isDone: boolean;
@@ -10,20 +10,21 @@ interface Props {
 
 export function UrlTestForm({ onStart, onReset, isRunning, isDone }: Props) {
   const [url, setUrl] = useState("https://sol.metapool.app/");
+  const [includeTx, setIncludeTx] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim() || isRunning) return;
     try {
       new URL(url);
-      onStart(url.trim());
+      onStart(url.trim(), includeTx);
     } catch {
       // Invalid URL
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2">
+    <form onSubmit={handleSubmit} className="space-y-3">
       <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Test Runner</h2>
       <div className="flex gap-2">
         <input
@@ -62,8 +63,31 @@ export function UrlTestForm({ onStart, onReset, isRunning, isDone }: Props) {
           </button>
         )}
       </div>
+
+      {/* Transaction tests toggle */}
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={includeTx}
+          onChange={(e) => setIncludeTx(e.target.checked)}
+          disabled={isRunning}
+          className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-teal-500 focus:ring-teal-500/30 disabled:opacity-50"
+        />
+        <span className="text-xs text-zinc-400">
+          Include stake/unstake transactions
+        </span>
+        {includeTx && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            Uses QA wallet funds (~0.003 SOL)
+          </span>
+        )}
+      </label>
+
       <p className="text-xs text-zinc-600">
-        Runs real on-chain checks: pool state, price peg, vault status, wallet balances
+        {includeTx
+          ? "Runs on-chain checks + real stake/unstake transactions via QA wallet"
+          : "Runs real on-chain checks: pool state, price peg, vault status, wallet balances"
+        }
       </p>
     </form>
   );

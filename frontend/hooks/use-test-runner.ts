@@ -19,9 +19,11 @@ const TEST_LABELS: Record<string, string> = {
   pool_state_check: "Read pool state on-chain",
   price_peg_check: "Compare price peg (on-chain vs Jupiter)",
   vault_status_check: "Check vault status (jitoSOL, mSOL, bSOL)",
+  stake_jitosol: "Stake jitoSOL → mpSOL (real TX)",
+  unstake_mpsol: "Unstake mpSOL → ticket (real TX)",
 };
 
-const TEST_NAMES = [
+const READ_TESTS = [
   "url_access_check",
   "wallet_balance_check",
   "pool_state_check",
@@ -29,23 +31,28 @@ const TEST_NAMES = [
   "vault_status_check",
 ];
 
+const TX_TESTS = [
+  "stake_jitosol",
+  "unstake_mpsol",
+];
+
 export function useTestRunner() {
-  const [steps, setSteps] = useState<StepState[]>(() =>
-    TEST_NAMES.map((name) => ({ name, label: TEST_LABELS[name], status: "pending" as const }))
-  );
+  const [steps, setSteps] = useState<StepState[]>([]);
   const [status, setStatus] = useState<RunnerStatus>("idle");
   const [url, setUrl] = useState("");
   const [report, setReport] = useState<QAReport | null>(null);
   const runningRef = useRef(false);
 
-  const start = useCallback(async (targetUrl: string, walletAddress: string) => {
+  const start = useCallback(async (targetUrl: string, walletAddress: string, includeTxTests: boolean) => {
     if (runningRef.current) return;
     runningRef.current = true;
+
+    const testNames = includeTxTests ? [...READ_TESTS, ...TX_TESTS] : READ_TESTS;
 
     setUrl(targetUrl);
     setStatus("running");
     setReport(null);
-    setSteps(TEST_NAMES.map((name) => ({ name, label: TEST_LABELS[name], status: "pending" })));
+    setSteps(testNames.map((name) => ({ name, label: TEST_LABELS[name], status: "pending" })));
 
     const callbacks: RealTestCallbacks = {
       onStepStart: (name) => {
@@ -65,15 +72,16 @@ export function useTestRunner() {
     };
 
     try {
-      const results = await runAllTests(targetUrl, walletAddress, callbacks);
-
+      const results = await runAllTests(targetUrl, walletAddress, includeTxTests, callbacks);
       const hasFails = results.some((r) => r.status === "FAIL" || r.status === "ERROR");
       setStatus(hasFails ? "failed" : "done");
+
+      const spentSOL = results.some((r) => r.txSignature) ? "~0.003 SOL (tx fees)" : "0 SOL (read-only)";
 
       const qaReport: QAReport = {
         timestamp: new Date().toISOString(),
         walletAddress,
-        spendSummary: "0 SOL (read-only tests)",
+        spendSummary: spentSOL,
         appUrl: targetUrl,
         overallStatus: hasFails ? "FAIL" : "PASS",
         results,
@@ -88,7 +96,7 @@ export function useTestRunner() {
   }, []);
 
   const reset = useCallback(() => {
-    setSteps(TEST_NAMES.map((name) => ({ name, label: TEST_LABELS[name], status: "pending" })));
+    setSteps([]);
     setStatus("idle");
     setUrl("");
     setReport(null);
