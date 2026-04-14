@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import { WalletHeader } from "@/components/wallet-header";
 import { BalancePanel } from "@/components/balance-panel";
 import { UrlTestForm } from "@/components/url-test-form";
@@ -11,6 +12,14 @@ import { useActiveWallet } from "@/hooks/use-active-wallet";
 export default function Home() {
   const runner = useTestRunner();
   const wallet = useActiveWallet();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Refresh balances when test completes
+  useEffect(() => {
+    if (runner.status === "done" || runner.status === "failed") {
+      setRefreshTrigger((prev) => prev + 1);
+    }
+  }, [runner.status]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -28,7 +37,11 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left column */}
           <div className="space-y-6">
-            <BalancePanel walletAddress={wallet.activeAddress} mode={wallet.mode} />
+            <BalancePanel
+              walletAddress={wallet.activeAddress}
+              mode={wallet.mode}
+              refreshTrigger={refreshTrigger}
+            />
             <ReportHistory newReport={runner.report} />
           </div>
 

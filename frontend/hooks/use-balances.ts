@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchSOLBalance, fetchTokenBalance } from "@/lib/solana";
 import { TOKENS } from "@/lib/constants";
 
@@ -9,10 +9,15 @@ interface Balances {
   mpSOL: number | null;
 }
 
-export function useBalances(walletAddress: string, pollIntervalMs = 30000) {
+export function useBalances(
+  walletAddress: string,
+  refreshTrigger = 0,
+  pollIntervalMs = 30000,
+) {
   const [balances, setBalances] = useState<Balances>({ SOL: null, jitoSOL: null, mpSOL: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const prevAddress = useRef(walletAddress);
 
   const refetch = useCallback(async () => {
     if (!walletAddress) return;
@@ -31,13 +36,24 @@ export function useBalances(walletAddress: string, pollIntervalMs = 30000) {
     }
   }, [walletAddress]);
 
+  // Reset and refetch when wallet address changes
   useEffect(() => {
-    setLoading(true);
-    setBalances({ SOL: null, jitoSOL: null, mpSOL: null });
+    if (walletAddress !== prevAddress.current) {
+      prevAddress.current = walletAddress;
+      setLoading(true);
+      setBalances({ SOL: null, jitoSOL: null, mpSOL: null });
+    }
     refetch();
     const interval = setInterval(refetch, pollIntervalMs);
     return () => clearInterval(interval);
-  }, [refetch, pollIntervalMs]);
+  }, [refetch, pollIntervalMs, walletAddress]);
+
+  // Refetch when external trigger changes (e.g., test runner completes)
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      refetch();
+    }
+  }, [refreshTrigger, refetch]);
 
   return { balances, loading, error, refetch };
 }
