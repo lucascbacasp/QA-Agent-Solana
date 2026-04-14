@@ -1,6 +1,7 @@
 /**
  * Real on-chain tests that run from the browser via RPC.
  * No private key needed — all read-only.
+ * Uses DataView instead of Node.js Buffer for browser compatibility.
  */
 import { HELIUS_RPC_URL, MPSOL_MINT, MAIN_STATE, QA_WALLET } from "./constants";
 import type { TestResult } from "./types";
@@ -16,6 +17,24 @@ const OFFSET_WITHDRAW_FEE_BP = 72;
 const OFFSET_BACKING_SOL_VALUE = 171;
 const OFFSET_OUTSTANDING_TICKETS = 179;
 const OFFSET_WAITING_HOURS = 187;
+
+// Browser-safe binary helpers (no Node.js Buffer)
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function readU64LE(data: Uint8Array, offset: number): number {
+  const view = new DataView(data.buffer, data.byteOffset);
+  return Number(view.getBigUint64(offset, true));
+}
+
+function readU16LE(data: Uint8Array, offset: number): number {
+  const view = new DataView(data.buffer, data.byteOffset);
+  return view.getUint16(offset, true);
+}
 
 async function rpc(method: string, params: unknown[]): Promise<unknown> {
   const res = await fetch(HELIUS_RPC_URL, {
@@ -42,13 +61,13 @@ export async function poolStateCheck(): Promise<TestResult> {
 
     if (!mainInfo?.value) throw new Error("Main state account not found");
 
-    const data = Buffer.from(mainInfo.value.data[0], "base64");
-    const backingLamports = Number(data.readBigUInt64LE(OFFSET_BACKING_SOL_VALUE));
+    const data = base64ToBytes(mainInfo.value.data[0]);
+    const backingLamports = readU64LE(data, OFFSET_BACKING_SOL_VALUE);
     const solBacking = backingLamports / 1e9;
-    const ticketsLamports = Number(data.readBigUInt64LE(OFFSET_OUTSTANDING_TICKETS));
+    const ticketsLamports = readU64LE(data, OFFSET_OUTSTANDING_TICKETS);
     const outstandingTickets = ticketsLamports / 1e9;
-    const withdrawFeeBp = data.readUInt16LE(OFFSET_WITHDRAW_FEE_BP);
-    const waitingHours = data.readUInt16LE(OFFSET_WAITING_HOURS);
+    const withdrawFeeBp = readU16LE(data, OFFSET_WITHDRAW_FEE_BP);
+    const waitingHours = readU16LE(data, OFFSET_WAITING_HOURS);
 
     // Get mpSOL supply
     const mintInfo = (await rpc("getAccountInfo", [
@@ -187,9 +206,9 @@ export async function vaultStatusCheck(): Promise<TestResult> {
       ])) as Array<{ pubkey: string; account: { data: [string, string] } }>;
 
       if (programAccounts.length > 0) {
-        const vaultData = Buffer.from(programAccounts[0].account.data[0], "base64");
-        const totalLst = Number(vaultData.readBigUInt64LE(48)) / 1e9; // vault_total_lst_amount
-        const locallyStored = Number(vaultData.readBigUInt64LE(56)) / 1e9;
+        const vaultData = base64ToBytes(programAccounts[0].account.data[0]);
+        const totalLst = readU64LE(vaultData, 48) / 1e9; // vault_total_lst_amount
+        const locallyStored = readU64LE(vaultData, 56) / 1e9;
         const depositsDisabled = vaultData[80] !== 0;
 
         details[v.name] = `${totalLst.toFixed(2)} total | deposits ${depositsDisabled ? "DISABLED" : "enabled"}`;
